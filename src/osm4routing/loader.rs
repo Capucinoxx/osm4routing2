@@ -19,8 +19,8 @@ fn write_lists_to_csv(
     output_file_path: &str,
 ) -> Result<Vec<StringRecord>, Box<dyn Error>> {
     let file = File::create(output_file_path)?;
-    let mut writer = WriterBuilder::new().delimiter(b';').from_writer(file);
-    writer.write_record(&["ID", "Nodes", "Tags"])?;
+    let mut writer = WriterBuilder::new().delimiter(b',').from_writer(file);
+    writer.write_record(&["id", "nodes", "tags"])?;
 
     let mut records: Vec<StringRecord> = Vec::new();
 
@@ -30,7 +30,7 @@ fn write_lists_to_csv(
             .map(|n| n.to_string())
             .collect::<Vec<String>>()
             .join(", ");
-        let record = StringRecord::from(vec![id.to_string(), nodes_str, format!("{:?}", tags)]);
+        let record = StringRecord::from(vec![id.to_string(), nodes_str, serde_json::to_string(tags).unwrap_or_default()]);
         writer.write_record(&record)?;
         records.push(record);
     }
@@ -49,7 +49,7 @@ fn write_lists_to_csv_nodes(
     output_file_path: &str,
 ) -> Result<Vec<StringRecord>, Box<dyn Error>> {
     let file = File::create(output_file_path)?;
-    let mut writer = WriterBuilder::new().delimiter(b';').from_writer(file);
+    let mut writer = WriterBuilder::new().delimiter(b',').from_writer(file);
     writer.write_record(&["ID", "Nodes", "Tags"])?;
 
     let mut records: Vec<StringRecord> = Vec::new();
@@ -65,22 +65,6 @@ fn write_lists_to_csv_nodes(
     println!("CSV file has been created: {}", output_file_path);
 
     Ok(records)
-}
-
-// Create a separate function to return the record list
-fn create_record_list(
-    id_list: &Vec<i64>,
-    node_list: &Vec<Vec<i64>>,
-    tag_list: &Vec<Map<String, Value>>,
-) -> Vec<String> {
-    let mut record_list = Vec::new();
-
-    for (id, (nodes, tags)) in id_list.iter().zip(node_list.iter().zip(tag_list.iter())) {
-        let record = format!("ID: {}, Nodes: {:?}, Tags: {:?}", id, nodes, tags);
-        record_list.push(record);
-    }
-
-    record_list
 }
 
 // Define a function to filter based on the subset of IDs
@@ -257,7 +241,7 @@ pub fn merge_csv_ways(
     nodes_list.extend(filtered_nodes_list_ptr);
     tags_list.extend(filtered_tags_list_ptr);
 
-    match write_lists_to_csv(&id_list,&nodes_list,&tags_list,"./full_ways2.csv"){
+    match write_lists_to_csv(&id_list,&nodes_list,&tags_list,merged_filename){
         Ok(f_records) => {
             merged_data=f_records;},
         Err(e) => println!("Error: {}", e),
