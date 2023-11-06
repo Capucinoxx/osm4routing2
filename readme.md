@@ -42,3 +42,14 @@ If you wand to reject certain edges based on their tag, use the `Reader` (it als
 let (nodes, edges) = osm4routing::Reader::new().reject("area", "yes").read("some_data.osm.pbf")?;
 
 ```
+
+
+rustup target add armv7-unknown-linux-gnueabihf
+
+sudo apt-get install gcc-arm-linux-gnueabihf
+
+cargo build --target=armv7-unknown-linux-gnueabihf --config "target.armv7-unknown-linux-gnueabihf.linker='arm-linux-gnueabihf-gcc'"
+
+file target/armv7-unknown-linux-gnueabihf/debug/osm4routing
+should output
+    target/armv7-unknown-linux-gnueabihf/debug/osm4routing: ELF 32-bit LSB pie executable, ARM, EABI5 version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux-armhf.so.3, BuildID[sha1]=4ac633569420cacac15679783c745044f436d8e6, for GNU/Linux 3.2.0, with debug_info, not stripped

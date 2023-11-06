@@ -7,6 +7,8 @@ description = "Convert OpenStreetMap data into routing friendly CSV"
 homepage = "https://github.com/Tristramg/osm4routing2"
 readme = "readme.md"
 license = "MIT"
+[profile.release]
+debug = true
 
 [dependencies]
 osmpbfreader = "0.16.0"
@@ -18,3 +20,5 @@ rmp = "0.8.12"
 rmp-serde = "0.15"
 [lib]
 name = "osm4routing"
+[target.armv7-unknown-linux-gnueabihf]
+linker = "arm-linux-gnueabihf-gcc"
