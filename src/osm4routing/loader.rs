@@ -312,39 +312,5 @@ pub fn merge_csv_nodes(
             merged_data=f_records;},
         Err(e) => println!("Error: {}", e),
     };
-    /* 
-    let mut merged_data = Vec::new();
-    let mut skip_header;
-    for filename in filenames {
-        skip_header = true;
-        let skip_full_read = !adjacent_geohashes.iter().any(|geohash| filename.contains(geohash));
-        if !Path::new(filename).exists() {
-            eprintln!("Missing tile file: {}", filename);
-            continue;
-        }
-
-        let file = File::open(filename)?;
-        let mut reader = csv::ReaderBuilder::new()
-        .has_headers(false) // Depending on your data, set this to true or false
-        .delimiter(b',')    // Set the custom delimiter as a byte
-        .from_reader(file);
-        for result in reader.records(){
-            let record = result?;
-            let node_id = record.get(0).unwrap_or("");
-            if skip_header {
-                skip_header = false;
-                continue
-            } else {
-                if skip_full_read {
-                    if filename.contains("_nodes.csv") {
-                            if !nodes_to_load.contains(&node_id.parse::<i64>().unwrap()) {
-                                continue;
-                            }
-                    } 
-                }
-            }
-            merged_data.push(record);
-        }
-    } */
     Ok(merged_data)
 }
