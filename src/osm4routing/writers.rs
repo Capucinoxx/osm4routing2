@@ -5,8 +5,8 @@ use serde_json::{json, Value};
 
 use super::models::*;
 
-pub fn csv(nodes: Vec<Node>, edges: Vec<Edge>) {
-    let edges_path = std::path::Path::new("edges.csv");
+pub fn csv(nodes: Vec<Node>, edges: Vec<Edge>, output_path: &str) {
+    let edges_path = std::path::Path::new(output_path).join("edges.csv");
     let mut edges_csv = csv::Writer::from_path(edges_path).unwrap();
     edges_csv
         .serialize(vec![
@@ -43,7 +43,7 @@ pub fn csv(nodes: Vec<Node>, edges: Vec<Edge>) {
             .expect("CSV: unable to write edge");
     }
 
-    let nodes_path = std::path::Path::new("nodes.csv");
+    let nodes_path = std::path::Path::new(output_path).join("nodes.csv");
     let mut nodes_csv = csv::Writer::from_path(nodes_path).unwrap();
     nodes_csv
         .serialize(vec!["id", "lon", "lat"])
@@ -55,7 +55,7 @@ pub fn csv(nodes: Vec<Node>, edges: Vec<Edge>) {
     }
 }
 
-pub fn geojson(_: Vec<Node>, edges: Vec<Edge>) {
+pub fn geojson(_: Vec<Node>, edges: Vec<Edge>, output_path: &str) {
     let features: Vec<Value> = edges
         .iter()
         .map(|edge| {
@@ -89,7 +89,9 @@ pub fn geojson(_: Vec<Node>, edges: Vec<Edge>) {
         "features": features,
     });
 
-    let file = File::create("data.geojson")
+
+    let geojson_path = std::path::Path::new(output_path).join("data.geojson");
+    let file = File::create(&geojson_path)
         .expect("Unable to create file");
     (|| -> Result<(), std::io::Error> {
         let mut writer = BufWriter::new(file);
