@@ -183,7 +183,7 @@ fn extract_values_nodes(data: &serde_json::Map<std::string::String, Value>, id_l
     Ok(())
 }
 
-pub fn merge_csv_ways(
+pub fn merge_msg_pack_ways(
     filenames: Vec<&str>,
     merged_filename: &str,
     geohash_ptr: Vec<&str>,
@@ -205,11 +205,8 @@ pub fn merge_csv_ways(
         // Open the MessagePack file
         match File::open(filename) {
             Ok(file) => {
-                let buffer_size = 8192*64;
-
-                // Create a BufReader with the specified buffer size
-                let reader = BufReader::with_capacity(buffer_size,file);
                 // Deserialize the MessagePack data into a serde::Value
+                let reader = BufReader::new(file);
                 match from_read::<_, Value>(reader) {
                     Ok(value) => {
              // Iterate through the geohash objects
@@ -236,7 +233,7 @@ pub fn merge_csv_ways(
                         eprintln!("Error deserializing MessagePack data: {}", e);
                     }
                 }
-                let mut duration = start.elapsed();
+                let duration = start.elapsed();
                 println!("Sngle file parse time {:?}", duration);
             }
             Err(error) => {
@@ -253,11 +250,12 @@ pub fn merge_csv_ways(
         }
     }
 
-    let mut filtered_id_list_ptr: Vec<i64> = Vec::new();
-    let mut filtered_nodes_list_ptr: Vec<Vec<i64>> = Vec::new();
-    let mut filtered_tags_list_ptr: Vec<serde_json::Map<String, Value>> = Vec::new();
+    let filtered_id_list_ptr: Vec<i64>;
+    let filtered_nodes_list_ptr: Vec<Vec<i64>>;
+    let filtered_tags_list_ptr: Vec<serde_json::Map<String, Value>>;
     //keep only ways that touch our original 9 geohashes in the filtered_list 
     (filtered_id_list_ptr, filtered_nodes_list_ptr, filtered_tags_list_ptr) = filter_lists_by_subset(&id_list_ptr,&nodes_list_ptr,&tags_list_ptr,&ways_to_load);
+
     id_list.extend(filtered_id_list_ptr);
     nodes_list.extend(filtered_nodes_list_ptr);
     tags_list.extend(filtered_tags_list_ptr);
@@ -271,7 +269,7 @@ pub fn merge_csv_ways(
 }
 
 
-pub fn merge_csv_nodes(
+pub fn merge_msg_pack_nodes(
     filenames: Vec<&str>,
     geohash_ptr: Vec<&str>,
     nodes_to_load: HashSet<i64>,
@@ -322,15 +320,11 @@ pub fn merge_csv_nodes(
             }
         }
     }
-    let mut filtered_id_list: Vec<i64> = Vec::new();
-    let mut filtered_lat_list: Vec<i64> = Vec::new();
-    let mut filtered_lon_list: Vec<i64> = Vec::new();
-    let mut filtered_lat_list_float: Vec<f64> = Vec::new();
-    let mut filtered_lon_list_float: Vec<f64> = Vec::new();
 
-    (filtered_id_list, filtered_lat_list, filtered_lon_list) = filter_lists_by_subset_nodes(&id_list,&lat_list,&lon_list,&nodes_to_load);
-    filtered_lat_list_float = convert_lat_lon_value(filtered_lat_list);
-    filtered_lon_list_float =  convert_lat_lon_value(filtered_lon_list);
+
+    let (filtered_id_list, filtered_lat_list, filtered_lon_list) :(Vec<i64>,Vec<i64>,Vec<i64>) = filter_lists_by_subset_nodes(&id_list,&lat_list,&lon_list,&nodes_to_load);
+    let filtered_lat_list_float = convert_lat_lon_value(filtered_lat_list);
+    let filtered_lon_list_float =  convert_lat_lon_value(filtered_lon_list);
     match write_lists_to_csv_nodes(&filtered_id_list,&filtered_lat_list_float,&filtered_lon_list_float,"./full_nodes.csv"){
         Ok(f_records) => {
             merged_data=f_records;},

@@ -1,6 +1,6 @@
 use osm4routing::{record_read, writers, loader, Node, Edge};
 use std::collections::HashSet;
-use std::time::{Duration, Instant};
+use std::time::{Instant};
 use csv::StringRecord;
 const USAGE: &str = "
 Usage: osm4routing [--wayfilenames=<wayfilenames>] [--nodefilenames=<nodefilenames>] [--adjacentgeohashes=<adjacent_geohashes>] [--geohashpointers=<geohash_ptr>] [--waystoload=<ways_to_load>] [--format=<output_format>] [--output=<output>]
@@ -21,11 +21,11 @@ fn main() {
         .unwrap_or_else(|e| e.exit());
     let mut start = Instant::now();
     let fmt = args.get_str("--format");
-    let way_files_iterator = args.get_str("--wayfilenames").split(",");
-    let adjacentgeohashes_iterator = args.get_str("--adjacentgeohashes").split(",");
-    let geohashpointers_iterator = args.get_str("--geohashpointers").split(",");
-    let ways_to_load_iterator = args.get_str("--waystoload").split(","); 
-    let node_files_iterator = args.get_str("--nodefilenames").split(",");
+    let way_files_iterator = args.get_str("--wayfilenames").split(',');
+    let adjacentgeohashes_iterator = args.get_str("--adjacentgeohashes").split(',');
+    let geohashpointers_iterator = args.get_str("--geohashpointers").split(',');
+    let ways_to_load_iterator = args.get_str("--waystoload").split(','); 
+    let node_files_iterator = args.get_str("--nodefilenames").split(',');
 
     let way_files: Vec<&str> = way_files_iterator.collect();
     let node_files: Vec<&str> = node_files_iterator.collect();
@@ -51,29 +51,37 @@ fn main() {
 
     println!("Parse input tile is: {:?}", duration);
     start = Instant::now();
-    match loader::merge_csv_ways(way_files,&[output,"/way_properties.csv"].join(""), geohash_ptr.clone(), ways_to_load_set, adjacentgeohashes.clone()) {
+    match loader::merge_msg_pack_ways(way_files,&[output,"/way_properties.csv"].join(""), geohash_ptr.clone(), ways_to_load_set, adjacentgeohashes.clone()) {
         Ok((f_records, nodes)) => {
-        merged_way_records=f_records;
-        nodes_to_load=nodes;},
-        Err(e) => println!("Error: {}", e),
+            merged_way_records=f_records;
+            nodes_to_load=nodes;},
+        Err(e) => {
+            println!("Error: {}", e);
+            debug_assert!(false);
+         },
     };
 
     duration = start.elapsed();
-    println!("Merge csv_ways time: {:?}", duration);
+    println!("Merge msg_pack_ways time: {:?}", duration);
     start = Instant::now();
     let nodes_to_load_hash: HashSet<i64> = HashSet::from_iter(nodes_to_load.iter().cloned());
-    match loader::merge_csv_nodes(node_files, geohash_ptr, nodes_to_load_hash) {
+    match loader::merge_msg_pack_nodes(node_files, geohash_ptr, nodes_to_load_hash) {
         Ok(f_records) => {
-        merged_node_records=f_records;},
-        Err(e) => println!("Error: {}", e),
+            merged_node_records=f_records;},
+        Err(e) => {
+            println!("Error: {}", e); 
+            debug_assert!(false);},
     };
     duration = start.elapsed();
-    println!("Merge csv_nodes time: {:?}", duration);
+    println!("Merge msg_pack_nodes time: {:?}", duration);
     start = Instant::now();
     match record_read(merged_node_records, merged_way_records)  {
-        Ok((nodes, edges)) => {handle_output_format(fmt, nodes, edges, output)},
-        Err(e) =>  println!("Error: {}", e),
-    }
+        Ok((nodes, edges)) => {
+            handle_output_format(fmt, nodes, edges, output)},
+        Err(e) => {
+            println!("Error: {}", e); 
+            debug_assert!(false);},
+    };
     duration = start.elapsed();
     println!("Create graph time: {:?}", duration);
 }
