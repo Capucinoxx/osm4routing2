@@ -31,7 +31,7 @@ fn main() {
     let node_files: Vec<&str> = node_files_iterator.collect();
     let adjacentgeohashes: Vec<&str> = adjacentgeohashes_iterator.collect();
     let geohash_ptr: Vec<&str> = geohashpointers_iterator.collect();
-    let ways_to_load_vec: Vec<i64> = ways_to_load_iterator.map(|s| s.parse::<i64>().expect("Failed to parse as i64")).collect();
+    let ways_to_load_vec: Vec<i64> = ways_to_load_iterator.map(|s| s.parse::<i64>().unwrap_or(0)).collect();
     let mut nodes_to_load: Vec<i64>=Vec::new();
     let mut merged_way_records:  Vec<StringRecord>=Vec::new();
     let mut merged_node_records:  Vec<StringRecord>=Vec::new();

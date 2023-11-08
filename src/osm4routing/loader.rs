@@ -2,17 +2,15 @@ extern crate serde;
 extern crate serde_json;
 extern crate csv;
 use std::io::BufReader;
-use std::collections::HashMap;
-use serde::Deserialize;
+use std::io::{ErrorKind};
 use rmp_serde::from_read;
 use std::fs::File;
 use serde_json::Value; 
 use std::collections::HashSet;
 use std::error::Error;
-use std::path::Path;
 use serde_json::{Map};
 use csv::{WriterBuilder, StringRecord};
-use std::time::{Duration, Instant};
+use std::time::{Instant};
 fn write_lists_to_csv(
     id_list: &Vec<i64>,
     node_list: &Vec<Vec<i64>>,
@@ -203,42 +201,56 @@ pub fn merge_csv_ways(
     let mut nodes_list_ptr: Vec<Vec<i64>> = Vec::new();
     let mut tags_list_ptr: Vec<serde_json::Map<String, Value>> = Vec::new();
     for filename in filenames {
-        let mut start = Instant::now();
+        let start = Instant::now();
         // Open the MessagePack file
-        let file = File::open(filename).expect("Failed to open file");
-        let buffer_size = 8192*64;
+        match File::open(filename) {
+            Ok(file) => {
+                let buffer_size = 8192*64;
 
-        // Create a BufReader with the specified buffer size
-        let mut reader = BufReader::with_capacity(buffer_size,file);
-        // Deserialize the MessagePack data into a serde::Value
-        match from_read::<_, Value>(reader) {
-            Ok(value) => {
-     // Iterate through the geohash objects
-     if let Value::Object(top_level_map) = value {
-        for (key, sub_map) in top_level_map.iter() {
-
-            //Handle the case where we are in the original 9 geohashes
-            if adjacent_geohashes.iter().any(|&s| s == key.as_str()){
-                if let Value::Object(sub_map) = sub_map {
-                    _=extract_values_ways(sub_map,&mut id_list,& mut nodes_list,&mut tags_list)
+                // Create a BufReader with the specified buffer size
+                let reader = BufReader::with_capacity(buffer_size,file);
+                // Deserialize the MessagePack data into a serde::Value
+                match from_read::<_, Value>(reader) {
+                    Ok(value) => {
+             // Iterate through the geohash objects
+             if let Value::Object(top_level_map) = value {
+                for (key, sub_map) in top_level_map.iter() {
+        
+                    //Handle the case where we are in the original 9 geohashes
+                    if adjacent_geohashes.iter().any(|&s| s == key.as_str()){
+                        if let Value::Object(sub_map) = sub_map {
+                            _=extract_values_ways(sub_map,&mut id_list,& mut nodes_list,&mut tags_list)
+                        }
+                        continue;
+                    }
+                    //Handle the case where we are not in one of the 9 original geohashes
+                    if geohash_ptr.iter().any(|&s| s == key.as_str()){
+                        if let Value::Object(sub_map) = sub_map {
+                            _=extract_values_ways(sub_map,&mut id_list_ptr,& mut nodes_list_ptr,&mut tags_list_ptr)
+                        }
+                    }
                 }
-                continue;
             }
-            //Handle the case where we are not in one of the 9 original geohashes
-            if geohash_ptr.iter().any(|&s| s == key.as_str()){
-                if let Value::Object(sub_map) = sub_map {
-                    _=extract_values_ways(sub_map,&mut id_list_ptr,& mut nodes_list_ptr,&mut tags_list_ptr)
+                } 
+                    Err(e) => {
+                        eprintln!("Error deserializing MessagePack data: {}", e);
+                    }
+                }
+                let mut duration = start.elapsed();
+                println!("Sngle file parse time {:?}", duration);
+            }
+            Err(error) => {
+                if error.kind() == ErrorKind::NotFound {
+                    // File not found, continue the loop.
+                    println!("File not found: {}", filename);
+                    continue;
+                } else {
+                    // Handle other types of errors.
+                    eprintln!("Error while opening file: {}", error);
+                    break; // You can also break the loop on other errors if needed.
                 }
             }
         }
-    }
-        } 
-            Err(e) => {
-                eprintln!("Error deserializing MessagePack data: {}", e);
-            }
-        }
-        let mut duration = start.elapsed();
-        println!("Sngle file parse time {:?}", duration);
     }
 
     let mut filtered_id_list_ptr: Vec<i64> = Vec::new();
@@ -246,7 +258,6 @@ pub fn merge_csv_ways(
     let mut filtered_tags_list_ptr: Vec<serde_json::Map<String, Value>> = Vec::new();
     //keep only ways that touch our original 9 geohashes in the filtered_list 
     (filtered_id_list_ptr, filtered_nodes_list_ptr, filtered_tags_list_ptr) = filter_lists_by_subset(&id_list_ptr,&nodes_list_ptr,&tags_list_ptr,&ways_to_load);
-    //let ddd = create_record_list(&aaa,&bbb,&ccc);
     id_list.extend(filtered_id_list_ptr);
     nodes_list.extend(filtered_nodes_list_ptr);
     tags_list.extend(filtered_tags_list_ptr);
@@ -272,26 +283,42 @@ pub fn merge_csv_nodes(
     for filename in filenames {
 
         // Open the MessagePack file
-        let file = File::open(filename).expect("Failed to open file");
-        let mut reader = BufReader::new(file);
-        // Deserialize the MessagePack data into a serde::Value
-        match from_read::<_, Value>(reader) {
-            Ok(value) => {
-     // Iterate through the geohash objects
-     if let Value::Object(top_level_map) = value {
-        for (key, sub_map) in top_level_map.iter() {
-            //Fetch all nodes required from each available geohash
-            if geohash_ptr.iter().any(|&s| s == key.as_str()){
-                if let Value::Object(sub_map) = sub_map {
-                    _=extract_values_nodes(sub_map,&mut id_list,& mut lat_list,&mut lon_list)
+        match File::open(filename) {
+            Ok(file) => {
+                // File was found, do something with it.
+                // For example, you can read or process the file.
+                let reader = BufReader::new(file);
+                // Deserialize the MessagePack data into a serde::Value
+                match from_read::<_, Value>(reader) {
+                    Ok(value) => {
+             // Iterate through the geohash objects
+             if let Value::Object(top_level_map) = value {
+                for (key, sub_map) in top_level_map.iter() {
+                    //Fetch all nodes required from each available geohash
+                    if geohash_ptr.iter().any(|&s| s == key.as_str()){
+                        if let Value::Object(sub_map) = sub_map {
+                            _=extract_values_nodes(sub_map,&mut id_list,& mut lat_list,&mut lon_list)
+                        }
+                        continue;
+                    }
                 }
-                continue;
             }
-        }
-    }
-        } 
-            Err(e) => {
-                eprintln!("Error deserializing MessagePack data: {}", e);
+                } 
+                    Err(e) => {
+                        eprintln!("Error deserializing MessagePack data: {}", e);
+                    }
+                }
+            }
+            Err(error) => {
+                if error.kind() == ErrorKind::NotFound {
+                    // File not found, continue the loop.
+                    println!("File not found: {}", filename);
+                    continue;
+                } else {
+                    // Handle other types of errors.
+                    eprintln!("Error while opening file: {}", error);
+                    break; // You can also break the loop on other errors if needed.
+                }
             }
         }
     }
@@ -300,9 +327,6 @@ pub fn merge_csv_nodes(
     let mut filtered_lon_list: Vec<i64> = Vec::new();
     let mut filtered_lat_list_float: Vec<f64> = Vec::new();
     let mut filtered_lon_list_float: Vec<f64> = Vec::new();
-    //println!("id_list: {:?}", id_list);
-    //println!("lat_list: {:?}", id_list);
-    //println!("lon_list: {:?}", id_list);
 
     (filtered_id_list, filtered_lat_list, filtered_lon_list) = filter_lists_by_subset_nodes(&id_list,&lat_list,&lon_list,&nodes_to_load);
     filtered_lat_list_float = convert_lat_lon_value(filtered_lat_list);
